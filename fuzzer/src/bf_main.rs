@@ -1,6 +1,6 @@
 use chrono::prelude::Local;
 use fastgen_common::defs;
-use libc::exit;
+use libc::{exit, O_WRONLY};
 use std::{
     fs::{self, read_dir, File, OpenOptions},
     io::{Read, Write},
@@ -9,6 +9,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex, RwLock,
     },
+    ffi::{CString}
 };
 
 use crate::bf_loop;
