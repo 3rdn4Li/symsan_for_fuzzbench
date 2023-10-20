@@ -1,5 +1,5 @@
 use crate::{branches::GlobalBranches, command::CommandOpt, depot::Depot, executor::Executor};
-use std::sync::{atomic::AtomicBool, Arc, Mutex, RwLock};
+use std::sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex, RwLock};
 
 use std::thread;
 
@@ -8,6 +8,7 @@ use crate::parser::*;
 use crate::solution::Solution;
 use crate::track_cons::*;
 use crate::union_table::*;
+use crate::bf_main::BF_NEWCOVERAGE;
 use fastgen_common::config;
 use nix::unistd::close;
 use std::collections::HashMap;
@@ -67,6 +68,7 @@ pub fn grading_loop(
             let mut_buf = mutate(buf, &sol.sol, sol.field_index, sol.field_size);
             let new_path = executor.run_sync(&mut_buf);
             if new_path.0 {
+                BF_NEWCOVERAGE.store(true, Ordering::SeqCst);
                 info!(
                     "grading input derived from on input {} by  \
                 flipping branch@ {:#01x} ctx {:#01x} order {}, \

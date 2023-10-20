@@ -6,6 +6,7 @@ use clap::{App, Arg};
 //extern crate angora_common;
 use fastgen::bf_main::*;
 
+
 fn main() {
     let matches = App::new("angora-fuzzer")
         .version(crate_version!())

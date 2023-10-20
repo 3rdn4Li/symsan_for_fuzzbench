@@ -21,6 +21,8 @@ use pretty_env_logger;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+pub static BF_NEWCOVERAGE: AtomicBool  = AtomicBool::new(false);
+
 pub fn bf_main(
     in_dir: &str,
     out_dir: &str,
@@ -76,6 +78,9 @@ pub fn bf_main(
     let mut id = 0;
     // This is the big while loop for fuzzing!!!
     loop {
+        if !running.load(Ordering::SeqCst) {
+            break;
+        }
         bf_wait(&mut executor);
         let solutions = {
             let r = running.clone();
@@ -151,23 +156,34 @@ static mut GO_COUNT: u32 = 0;
 fn bf_wait(executor: &mut Executor) {
     let pipe_path = "/dev/shm/bf-symsan";
 
+    unsafe {
+        if GO_COUNT > 0 {
+            GO_COUNT -= 1;
+            return;
+        }
+    }
+
+
+
     // Write Stage, write to pipe "ready" or "new".
     {
         let mut file = OpenOptions::new()
             .write(true)
             .open(pipe_path)
             .expect("open pipe failed");
-        file.write_all(b"ready").expect("write pipe failed");
+        //println!("prepare to write");
+        if BF_NEWCOVERAGE.load(Ordering::SeqCst) == false {
+            file.write_all(b"ready").expect("Error writing to the named pipe") 
+        } else {
+            BF_NEWCOVERAGE.store(false,Ordering::SeqCst);
+            file.write_all(b"new").expect("Error writing to the named pipe") 
+        }
+    
     }
 
     // Read Stage, read from the pipe
     loop {
-        unsafe {
-            if GO_COUNT > 0 {
-                GO_COUNT -= 1;
-                return;
-            }
-        }
+
 
         let mut buf = Vec::new();
         {
