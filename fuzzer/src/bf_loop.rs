@@ -40,7 +40,6 @@ pub fn dispatcher(
 }
 
 pub fn grading_loop(
-    running: Arc<AtomicBool>,
     cmd_opt: CommandOpt,
     depot: Arc<Depot>,
     global_branches: Arc<GlobalBranches>,
@@ -103,7 +102,6 @@ pub fn grading_loop(
 }
 
 pub fn fuzz_loop(
-    running: Arc<AtomicBool>,
     cmd_opt: CommandOpt,
     depot: Arc<Depot>,
     global_branches: Arc<GlobalBranches>,

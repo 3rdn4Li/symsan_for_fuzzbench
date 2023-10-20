@@ -11,13 +11,10 @@ use std::{
     },
 };
 
-pub fn sync_depot(executor: &mut Executor, running: Arc<AtomicBool>, dir: &Path) {
+pub fn sync_depot(executor: &mut Executor, dir: &Path) {
     let seed_dir = dir.read_dir().expect("read_dir call failed");
     for entry in seed_dir {
         if let Ok(entry) = entry {
-            if !running.load(Ordering::SeqCst) {
-                break;
-            }
             let path = &entry.path();
             if path.is_file() {
                 let file_len =
@@ -39,7 +36,6 @@ pub fn sync_depot(executor: &mut Executor, running: Arc<AtomicBool>, dir: &Path)
 // Now we are in a sub-dir of AFL's output dir
 pub fn sync_afl(
     executor: &mut Executor,
-    running: Arc<AtomicBool>,
     sync_dir: &Path,
     sync_ids: &mut HashMap<String, usize>,
 ) {
@@ -55,7 +51,7 @@ pub fn sync_afl(
                         if !name.contains(defs::ANGORA_DIR_NAME) && !name.starts_with(".") {
                             let path = entry_path.join("queue");
                             if path.is_dir() {
-                                sync_one_afl_dir(executor, running.clone(), &path, &name, sync_ids);
+                                sync_one_afl_dir(executor,  &path, &name, sync_ids);
                             }
                         }
                     }
@@ -81,7 +77,6 @@ fn get_afl_id(f: &fs::DirEntry) -> Option<usize> {
 
 fn sync_one_afl_dir(
     executor: &mut Executor,
-    running: Arc<AtomicBool>,
     sync_dir: &Path,
     sync_name: &str,
     sync_ids: &mut HashMap<String, usize>,
@@ -93,9 +88,6 @@ fn sync_one_afl_dir(
         .expect("read_dir call failed while syncing afl ..");
     for entry in seed_dir {
         if let Ok(entry) = entry {
-            if !running.load(Ordering::SeqCst) {
-                break;
-            }
             let path = &entry.path();
             if path.is_file() {
                 if let Some(id) = get_afl_id(&entry) {

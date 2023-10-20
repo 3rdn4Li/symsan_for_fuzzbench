@@ -48,9 +48,7 @@ pub fn bf_main(
     let global_branches = Arc::new(branches::GlobalBranches::new());
     let branch_gencount = Arc::new(RwLock::new(HashMap::<(u64, u32, u32, u64), u32>::new()));
     let branch_fliplist = Arc::new(RwLock::new(HashSet::<(u64, u32, u32, u64)>::new()));
-    let running = Arc::new(AtomicBool::new(true));
     let forklock = Arc::new(Mutex::new(0));
-    set_sigint_handler(running.clone());
 
     let mut executor = executor::Executor::new(
         command_option.specify(0),
@@ -61,7 +59,7 @@ pub fn bf_main(
         forklock.clone(),
     );
 
-    sync::sync_depot(&mut executor, running.clone(), &depot.dirs.seeds_dir);
+    sync::sync_depot(&mut executor, &depot.dirs.seeds_dir);
 
     if depot.empty() {
         error!(
@@ -78,29 +76,24 @@ pub fn bf_main(
     let mut id = 0;
     // This is the big while loop for fuzzing!!!
     loop {
-        if !running.load(Ordering::SeqCst) {
-            break;
-        }
         bf_wait(&mut executor);
         let solutions = {
-            let r = running.clone();
             let d = depot.clone();
             let b = global_branches.clone();
             let cmd = command_option.specify(2);
             let bg = branch_gencount.clone();
             let blist = branch_fliplist.clone();
             let fk = forklock.clone();
-            bf_loop::fuzz_loop(r, cmd, d, b, bg, blist, restart, fk, id)
+            bf_loop::fuzz_loop(cmd, d, b, bg, blist, restart, fk, id)
         };
         {
-            let r = running.clone();
             let d = depot.clone();
             let b = global_branches.clone();
             let cmd = command_option.specify(2);
             let bg = branch_gencount.clone();
             let blist = branch_fliplist.clone();
             let fk = forklock.clone();
-            bf_loop::grading_loop(r, cmd, d, b, bg, blist, fk, solutions);
+            bf_loop::grading_loop( cmd, d, b, bg, blist, fk, solutions);
         }
         id = id + 1;
     }
@@ -141,14 +134,6 @@ fn gen_path_afl(out_dir: &str) -> PathBuf {
         warn!("dir has existed. {:?}", base_path);
     }
     base_path.join(defs::ANGORA_DIR_NAME)
-}
-
-fn set_sigint_handler(r: Arc<AtomicBool>) {
-    ctrlc::set_handler(move || {
-        warn!("Ending Fuzzing.");
-        r.store(false, Ordering::SeqCst);
-    })
-    .expect("Error setting SIGINT handler!");
 }
 
 static mut GO_COUNT: u32 = 0;
